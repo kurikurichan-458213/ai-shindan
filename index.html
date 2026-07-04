@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI活用度・レベル診断｜あなたのAI偏差値をチェック</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1c2330; --sub:#5b6577;
+    --line:#e6e9f0; --brand:#5b6cff; --brand2:#8b5cf6; --accent:#00b8a9;
+    --good:#16a34a; --warn:#f59e0b; --shadow:0 10px 30px rgba(28,35,48,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0e1117; --card:#171b24; --ink:#eef1f7; --sub:#9aa4b6;
+      --line:#262c39; --brand:#7c88ff; --brand2:#a78bfa; --accent:#2dd4bf;
+      --shadow:0 10px 30px rgba(0,0,0,.4); }
+  }
+  :root[data-theme="light"]{ --bg:#f6f7fb; --card:#fff; --ink:#1c2330; --sub:#5b6577; --line:#e6e9f0; --shadow:0 10px 30px rgba(28,35,48,.10); }
+  :root[data-theme="dark"]{ --bg:#0e1117; --card:#171b24; --ink:#eef1f7; --sub:#9aa4b6; --line:#262c39; --shadow:0 10px 30px rgba(0,0,0,.4); }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Segoe UI",Meiryo,sans-serif;
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+    min-height:100dvh; display:flex; flex-direction:column; align-items:center;
+    padding:20px 16px 48px;
+  }
+  .wrap{width:100%; max-width:560px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    box-shadow:var(--shadow); padding:26px 22px; margin-top:14px;
+  }
+  .brandbar{display:flex; align-items:center; gap:8px; justify-content:center; color:var(--sub); font-size:13px; font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2))}
+  h1{font-size:clamp(22px,6vw,30px); line-height:1.35; margin:6px 0 4px; text-align:center; letter-spacing:.2px}
+  .lead{color:var(--sub); text-align:center; font-size:15px; margin:2px 0 18px}
+  .badge{display:inline-block; background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff;
+    font-weight:700; font-size:12px; padding:5px 12px; border-radius:999px; letter-spacing:.4px}
+  .meta{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; color:var(--sub); font-size:13px; margin:14px 0 4px}
+  .meta span{background:rgba(123,136,255,.12); padding:5px 11px; border-radius:999px; font-weight:600}
+  .btn{
+    display:block; width:100%; border:0; cursor:pointer; border-radius:14px;
+    font-size:17px; font-weight:800; padding:16px 18px; margin-top:16px; color:#fff;
+    background:linear-gradient(135deg,var(--brand),var(--brand2)); box-shadow:0 8px 20px rgba(91,108,255,.35);
+    transition:transform .08s ease, filter .15s ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn:hover{filter:brightness(1.05)}
+  .btn.sub{background:transparent; color:var(--brand); box-shadow:none; border:2px solid var(--line); font-weight:700; font-size:15px; padding:12px}
+  .btn.share{background:#000}
+  :root[data-theme="light"] .btn.share, :not([data-theme]) .btn.share{background:#111}
+
+  /* progress */
+  .progress-head{display:flex; justify-content:space-between; align-items:baseline; color:var(--sub); font-size:13px; font-weight:700; margin-bottom:8px}
+  .bar{height:8px; background:var(--line); border-radius:999px; overflow:hidden}
+  .bar>i{display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,var(--brand),var(--brand2)); transition:width .3s ease}
+
+  .q{font-size:clamp(18px,5vw,22px); font-weight:800; margin:16px 0 4px; line-height:1.5}
+  .qsub{color:var(--sub); font-size:13px; margin-bottom:12px}
+  .opts{display:flex; flex-direction:column; gap:10px; margin-top:8px}
+  .opt{
+    text-align:left; background:var(--card); border:2px solid var(--line); color:var(--ink);
+    border-radius:14px; padding:14px 15px; font-size:15.5px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; gap:11px; transition:border-color .12s, background .12s, transform .06s;
+  }
+  .opt:hover{border-color:var(--brand)}
+  .opt:active{transform:scale(.99)}
+  .opt .k{flex:0 0 26px; height:26px; border-radius:8px; background:rgba(123,136,255,.16); color:var(--brand);
+    display:grid; place-items:center; font-weight:800; font-size:14px}
+  .opt.sel{border-color:var(--brand); background:rgba(123,136,255,.10)}
+  .navrow{display:flex; gap:10px; margin-top:16px}
+  .navrow .btn{margin-top:0}
+  .back{flex:0 0 96px}
+
+  /* result */
+  .gauge{position:relative; width:190px; height:190px; margin:6px auto 4px}
+  .gauge svg{transform:rotate(-90deg)}
+  .gauge .val{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center}
+  .gauge .num{font-size:42px; font-weight:900; line-height:1}
+  .gauge .den{font-size:13px; color:var(--sub); font-weight:700; margin-top:2px}
+  .level{text-align:center; margin:6px 0 2px}
+  .level .lv{font-size:13px; font-weight:800; color:var(--brand); letter-spacing:1px}
+  .level .name{font-size:clamp(22px,6vw,28px); font-weight:900; margin:2px 0}
+  .tagline{text-align:center; color:var(--sub); font-size:14px; margin-bottom:10px}
+  .block{border:1px solid var(--line); border-radius:14px; padding:14px 15px; margin-top:12px; background:rgba(123,136,255,.05)}
+  .block h3{margin:0 0 6px; font-size:14px; letter-spacing:.5px; color:var(--sub)}
+  .block p{margin:0; font-size:15px}
+  .steps{margin:8px 0 0; padding:0; list-style:none; counter-reset:s}
+  .steps li{position:relative; padding:8px 0 8px 38px; font-size:15px; border-top:1px dashed var(--line)}
+  .steps li:first-child{border-top:0}
+  .steps li::before{counter-increment:s; content:counter(s); position:absolute; left:0; top:8px;
+    width:26px; height:26px; border-radius:8px; background:linear-gradient(135deg,var(--brand),var(--brand2));
+    color:#fff; font-weight:800; display:grid; place-items:center; font-size:14px}
+  /* prescriptions */
+  .rxlead{margin:0 0 10px; color:var(--sub); font-size:13.5px}
+  .rx{border:1px solid var(--line); border-radius:12px; background:var(--card); padding:12px 13px; margin-top:10px}
+  .rx .chip{display:inline-block; font-size:12px; font-weight:800; color:#fff; padding:3px 10px; border-radius:999px;
+    background:linear-gradient(135deg,var(--brand),var(--brand2)); margin-right:6px}
+  .rx .rxname{font-size:14px; font-weight:800}
+  .rxprompt{margin-top:8px; border:1px dashed var(--line); border-radius:10px; background:rgba(123,136,255,.07);
+    padding:10px 11px; font-size:13.5px; line-height:1.65; word-break:break-word; -webkit-user-select:all; user-select:all}
+  .rxwhy{margin:8px 0 0; color:var(--sub); font-size:12.5px}
+  .copybtn{margin-top:9px; width:100%; border:0; cursor:pointer; border-radius:10px; font-weight:800; font-size:14px;
+    padding:10px; color:#fff; background:var(--accent)}
+  .copybtn.done{background:var(--good)}
+  .rxnote{margin:10px 0 0; color:var(--sub); font-size:12px}
+  .cta{margin-top:18px; border-radius:16px; padding:18px; text-align:center;
+    background:linear-gradient(135deg,rgba(91,108,255,.14),rgba(139,92,246,.14)); border:1px solid var(--line)}
+  .cta b{font-size:16px}
+  .cta p{margin:4px 0 12px; color:var(--sub); font-size:14px}
+  /* share box */
+  .sharebox{margin-top:14px; border:1px solid var(--line); border-radius:16px; padding:16px 15px;
+    background:rgba(0,184,169,.06)}
+  .sharebox h3{margin:0 0 4px; font-size:15px}
+  .shlead{margin:0 0 10px; color:var(--sub); font-size:13px}
+  .shpreview{border:1px dashed var(--line); border-radius:10px; background:var(--card);
+    padding:10px 12px; font-size:13.5px; line-height:1.65; white-space:pre-wrap; word-break:break-word;
+    -webkit-user-select:all; user-select:all}
+  .btn.xopen{background:#111; text-align:center; text-decoration:none}
+  .shhint{margin:8px 0 0; color:var(--sub); font-size:12px}
+  .foot{text-align:center; color:var(--sub); font-size:12px; margin-top:22px; line-height:1.6}
+  .foot a{color:var(--brand); text-decoration:none}
+  .hidden{display:none !important}
+  .fade{animation:fade .35s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+  .themebtn{position:fixed; top:12px; right:12px; background:var(--card); border:1px solid var(--line);
+    color:var(--sub); border-radius:999px; width:38px; height:38px; cursor:pointer; font-size:16px}
+</style>
+</head>
+<body>
+<button class="themebtn" id="themeBtn" title="表示切替" aria-label="表示切替">🌙</button>
+<div class="wrap">
+
+  <!-- TITLE -->
+  <section id="screen-start">
+    <div class="brandbar"><span class="dot"></span> @Marron__Ai ｜ X × AIプロンプト × note</div>
+    <div class="card fade">
+      <div style="text-align:center"><span class="badge">無料・登録不要</span></div>
+      <h1>AI活用度<br>レベル診断</h1>
+      <p class="lead">10個の質問に答えるだけ。<br>あなたの「AI偏差値」と、次にやるべきことが分かります。</p>
+      <div class="meta"><span>⏱ 約1分</span><span>❓ 全10問</span><span>📱 スマホ対応</span></div>
+      <button class="btn" id="startBtn">診断をはじめる</button>
+      <p class="foot">結果はこの端末だけに保存されます（サーバー送信なし）。</p>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="screen-quiz" class="hidden">
+    <div class="card fade">
+      <div class="progress-head"><span id="pLabel">Q1 / 10</span><span id="pPct">0%</span></div>
+      <div class="bar"><i id="pBar"></i></div>
+      <div class="q" id="qText">—</div>
+      <div class="qsub" id="qSub"></div>
+      <div class="opts" id="opts"></div>
+      <div class="navrow">
+        <button class="btn sub back" id="backBtn">← 戻る</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="screen-result" class="hidden">
+    <div class="card fade">
+      <div class="gauge">
+        <svg width="190" height="190" viewBox="0 0 190 190">
+          <circle cx="95" cy="95" r="82" fill="none" stroke="var(--line)" stroke-width="16"/>
+          <circle id="gArc" cx="95" cy="95" r="82" fill="none" stroke="url(#g)" stroke-width="16"
+                  stroke-linecap="round" stroke-dasharray="515" stroke-dashoffset="515"/>
+          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--brand)"/><stop offset="1" stop-color="var(--brand2)"/>
+          </linearGradient></defs>
+        </svg>
+        <div class="val"><div class="num" id="rScore">0</div><div class="den">/ 30 点</div></div>
+      </div>
+      <div class="level">
+        <div class="lv" id="rLv">LEVEL</div>
+        <div class="name" id="rName">—</div>
+      </div>
+      <div class="tagline" id="rTag"></div>
+
+      <div class="block"><h3>💪 あなたの強み</h3><p id="rStrong"></p></div>
+      <div class="block"><h3>🌱 のびしろ</h3><p id="rWeak"></p></div>
+
+      <div class="block rxwrap"><h3 id="rxTitle">🩺 あなた専用の処方箋</h3>
+        <p class="rxlead" id="rxLead">回答から特定した「弱点」に、今すぐコピペで効くプロンプトを処方します。</p>
+        <div id="rxList"></div>
+        <p class="rxnote">※「[ ]」の部分をご自身の内容に書き換えて、AIに貼り付けてください。</p>
+      </div>
+
+      <div class="block"><h3>🚀 次にやるべき3ステップ</h3>
+        <ul class="steps" id="rSteps"></ul>
+      </div>
+
+      <div class="cta">
+        <b id="ctaTitle">もっと伸ばす“次の一手”は?</b>
+        <p id="ctaText">レベル別の具体的なやり方は、プロフィールのnoteにまとめています。</p>
+        <a class="btn" id="ctaBtn" href="#" target="_blank" rel="noopener">📘 note・プロフィールを見る</a>
+      </div>
+
+      <div class="sharebox">
+        <h3>🎉 結果をXでシェアしよう</h3>
+        <p class="shlead">下の投稿文がそのまま使えます。かんたん2ステップ！</p>
+        <div class="shpreview" id="shPreview"></div>
+        <button class="btn share" id="shCopyBtn">① 投稿文をコピーする</button>
+        <a class="btn xopen" id="shOpenBtn" href="#" target="_blank" rel="noopener">② Xを開いてポストする</a>
+        <p class="shhint">②で投稿文が自動で入っていればそのままポスト。入っていなければ長押しで貼り付けてください。</p>
+      </div>
+
+      <div class="navrow">
+        <button class="btn sub" id="retryBtn">もう一度診断する</button>
+      </div>
+      <p class="foot">
+        作成：<a href="https://x.com/Marron__Ai" target="_blank" rel="noopener">@Marron__Ai</a>
+        ｜ AI × 副業 × note の発信中
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===== 設定：ここを書き換えれば商品リンク等を差し替え可能 ===== */
+  var CONFIG = {
+    xHandle: "Marron__Ai",
+    // 結果CTAのリンク先（noteやプロフのリンクツリー等に差し替え）
+    ctaUrl: "https://x.com/Marron__Ai",
+    hashtags: "AI活用度診断,AI副業,ChatGPT",
+    // 宣伝用URL（公開後の本番URL。http(s)配信時は自動で現在のURLを使う）
+    toolUrl: "https://kurikurichan-458213.github.io/ai-shindan/"
+  };
+  /* 配信中のURLを自動検出（どこにホスティングしてもシェア文に正しいURLが入る） */
+  var TOOL_URL = (location.protocol.indexOf("http") === 0)
+    ? location.href.split("#")[0].split("?")[0]
+    : CONFIG.toolUrl;
+
+  /* ===== 設問（各4択・3/2/1/0点） ===== */
+  var QUESTIONS = [
+    { d:"使う習慣", q:"AI（ChatGPTなど）をどれくらい使っていますか？", s:"ふだんの使用頻度",
+      a:["ほぼ毎日、仕事や副業で使う","週に数回は使う","たまに気が向いたら","ほとんど使っていない"] },
+    { d:"プロンプト力", q:"プロンプト（AIへの指示文）を工夫していますか？", s:"指示の出し方",
+      a:["役割・条件・例まで細かく指定する","そこそこ具体的に書く","短い一言でお願いする程度","そもそも書き方が分からない"] },
+    { d:"仕組み化", q:"AIを「作業の一部」に組み込めていますか？", s:"業務への定着",
+      a:["決まった作業はAI前提の手順にしている","いくつかの作業で活用中","思い出したときだけ","組み込めていない"] },
+    { d:"リサーチ", q:"情報リサーチ・調べ物にAIを使いますか？", s:"リサーチ活用",
+      a:["下調べ〜要約まで任せている","ときどき壁打ち相手に使う","検索の補助程度","使わない"] },
+    { d:"文章作成", q:"文章作成（投稿・記事・メール）にAIを使いますか？", s:"ライティング活用",
+      a:["下書き〜推敲までAIと共同作業","たたき台を作ってもらう","たまに言い回しを相談","自分で全部書く"] },
+    { d:"自動化・時短", q:"繰り返し作業を自動化・効率化していますか？", s:"自動化・時短",
+      a:["テンプレや仕組みで大幅に時短","一部は効率化できている","やりたいけど手つかず","考えたことがない"] },
+    { d:"学び方", q:"AIの新しい使い方を学ぶ習慣はありますか？", s:"学習姿勢",
+      a:["日常的に新しい手法を試す","気になったら調べる","たまに情報が入る程度","特に学んでいない"] },
+    { d:"発信への活用", q:"AIをSNS発信やコンテンツ作りに活かしていますか？", s:"発信への活用",
+      a:["発信の企画〜作成まで活用","投稿ネタ出しに使う","少しだけ試した","活かせていない"] },
+    { d:"ツールの幅", q:"使えるAIツールの幅は？", s:"ツールの引き出し",
+      a:["用途で複数ツールを使い分ける","主要ツールは一通り触った","1つを何となく使う","1つも定着していない"] },
+    { d:"収益化", q:"AI活用を「収益・成果」につなげられていますか？", s:"収益化への接続",
+      a:["すでに成果や収入につながっている","手応えを感じ始めている","これから狙いたい","結びついていない"] }
+  ];
+
+  /* ===== 弱点別・処方箋プロンプト（プロンプト集500選より） ===== */
+  var PRESCRIPTIONS = [
+    { t:"プロンプト自動生成",
+      p:"私は「[やりたいこと（例：note記事のタイトルを10個作りたい）]」をAIに頼みたいです。最もわかりやすく・効果的なプロンプトを3パターン作ってください。",
+      w:"自分でプロンプトを書けなくても、AIに作らせれば最適な指示文が手に入ります。まずはこれで毎日1回。" },
+    { t:"秘奥義・5段階深掘り",
+      p:"答える前に「なぜそうなのか？」を5回繰り返して根本原因まで掘り下げてから回答してください。",
+      w:"いつもの指示文の“末尾”に足すだけ。表面的な答えで終わらず、AIが自分で深掘りしてくれます。" },
+    { t:"月間投稿カレンダー作成",
+      p:"「[テーマ]」で「[頻度（例：毎日・週3回）]」投稿する1ヶ月分のXコンテンツカレンダーを作ってください。曜日・テーマ・投稿形式（単発/スレッド/画像）も含めてください。",
+      w:"仕組み化の第一歩。「今日何をしよう」と悩む時間がゼロになります。" },
+    { t:"悩みツイート発掘",
+      p:"「[テーマ]」について、Xでよくつぶやかれている本音の悩みや愚痴を20個リストアップしてください。",
+      w:"読者のリアルな言葉が集まるので、刺さる投稿やnoteのネタに直結します。" },
+    { t:"導入文（リード文）強化",
+      p:"「[テーマ]」の記事の導入文を「読者の悩みに共感→問題提起→解決の予告」の流れで3パターン作ってください。読者が続きを読まずにはいられない感じにしてください。",
+      w:"最初の3行で読者を引き込めるかが、読了率を決めます。" },
+    { t:"競合リサーチ自動化",
+      p:"「[ジャンル（例：AI副業・noteプロンプト集）]」の競合をAIを使って効率よくリサーチするためのプロンプトを作ってください。調査項目・分析の切り口・まとめ方も含めてください。",
+      w:"手作業の10倍の速さでリサーチが終わる、時短の入口です。" },
+    { t:"秘奥義・自問による深掘り",
+      p:"回答した後に「でも本当にそうか？」と自問して、最初の回答を疑う視点からも考えてください。",
+      w:"末尾に足すだけでAIの答えが一段深くなる。新しい使い方を学ぶ最初の一歩に。" },
+    { t:"共感バズポスト生成",
+      p:"「[テーマ]」について「[読者層（例：副業初心者）]」が思わず「いいね！」する共感ポストを5パターン作ってください。冒頭1行が特に刺さるようにしてください。",
+      w:"発信への活用はここから。冒頭1行の強さが伸びる投稿の入口です。" },
+    { t:"考え方プロセス出力プロンプト",
+      p:"「[テーマ（例：副業のターゲット設定）]」について、AIが考え方のプロセスを順番に説明しながら答えるプロンプトを作ってください。",
+      w:"思考プロセスを出力させると、どのAIツールでも回答の質と再現性が上がります。" },
+    { t:"スキル別副業アイデア発掘",
+      p:"私のスキル・経験は「[スキル（例：Excelが得意・子育て経験・接客5年）]」です。AIを使って月3万円を目指せる副業アイデアを10個提案してください。初めやすさ・月収目安・必要ツールもセットで教えてください。",
+      w:"既存スキルを活かすと、ゼロから学ぶ必要がなく最短で収益化に近づけます。" }
+  ];
+
+  /* ===== レベル定義 ===== */
+  var LEVELS = [
+    { min:0,  max:6,  lv:"LEVEL 1", name:"これから期", tag:"伸びしろは満点。今日が最高のスタートです。",
+      strong:"「やってみよう」と一歩踏み出せていること。ここからの伸び幅が一番大きいゾーンです。",
+      weak:"AIをまだ“特別なもの”に感じているかも。まずは毎日1回、触る習慣から。",
+      steps:["ChatGPTに今日の悩みを1つ相談してみる","「初心者向けに教えて」と付けて聞いてみる","1週間、毎日1回だけAIに触れる"] },
+    { min:7,  max:12, lv:"LEVEL 2", name:"入門期", tag:"基礎はOK。あとは“指示の質”で世界が変わります。",
+      strong:"AIに触れる習慣がつき始めています。使う場面を知っているのは大きな武器。",
+      weak:"指示がざっくりで、AIの実力を出しきれていない可能性大。プロンプトの型を1つ覚えると激変します。",
+      steps:["指示に「役割・条件・例」を足してみる","出力の末尾に“もう一段深めて”と付け足す","よく使う指示をメモして使い回す"] },
+    { min:13, max:18, lv:"LEVEL 3", name:"活用期", tag:"もう立派な使い手。仕組み化で“時間”が生まれます。",
+      strong:"複数の場面でAIを使いこなし始めています。作業の相棒として機能している状態。",
+      weak:"単発利用が多く、“仕組み”になっていないかも。テンプレ化で再現性を上げると一気に効率化。",
+      steps:["定番作業をテンプレ・プロンプト集にまとめる","リサーチ→下書きの流れをAIで連結する","浮いた時間を発信や収益活動に回す"] },
+    { min:19, max:24, lv:"LEVEL 4", name:"実践期", tag:"上位層。あとは“発信と収益”に接続するだけ。",
+      strong:"AIを日常業務に定着させ、時短も実現できています。再現性のある使い方ができる段階。",
+      weak:"活用が“自分の作業”で止まりがち。発信・商品化へつなげると成果が跳ねます。",
+      steps:["AI活用の知見を投稿・noteで発信する","得意な使い方を“型”として商品化する","成果を数値で記録し改善サイクルを回す"] },
+    { min:25, max:30, lv:"LEVEL 5", name:"使いこなし期", tag:"トップ層。あなたの知見そのものが“商品”です。",
+      strong:"AIを収益・成果に接続できているエキスパート。学び続ける姿勢も一級品。",
+      weak:"のびしろは“アウトプットの拡張”。あなたの手順を体系化すれば、そのまま資産になります。",
+      steps:["自分のノウハウをnote/教材に体系化する","再現性の高い“型”をシリーズで発信する","仕組み化して収益を自動化・多角化する"] }
+  ];
+
+  /* ===== 状態 ===== */
+  var answers = new Array(QUESTIONS.length).fill(null);
+  var idx = 0;
+  var STORE_KEY = "ai_level_shindan_v1";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var screens = { start:$("screen-start"), quiz:$("screen-quiz"), result:$("screen-result") };
+  function show(name){
+    for(var k in screens){ screens[k].classList.add("hidden"); }
+    screens[name].classList.remove("hidden");
+    var s = screens[name]; s.classList.remove("fade"); void s.offsetWidth; s.classList.add("fade");
+    window.scrollTo({top:0, behavior:"instant" in window ? "instant" : "auto"});
+  }
+
+  /* ===== テーマ切替 ===== */
+  var themeBtn = $("themeBtn");
+  function applyTheme(t){
+    if(t){ document.documentElement.setAttribute("data-theme", t); }
+    var dark = document.documentElement.getAttribute("data-theme")==="dark" ||
+      (!document.documentElement.getAttribute("data-theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    themeBtn.textContent = dark ? "☀️" : "🌙";
+  }
+  try{ var st=localStorage.getItem("ai_level_theme"); if(st) applyTheme(st); else applyTheme(); }catch(e){ applyTheme(); }
+  themeBtn.addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var isDark = cur==="dark" || (!cur && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = isDark ? "light" : "dark";
+    applyTheme(next);
+    try{ localStorage.setItem("ai_level_theme", next); }catch(e){}
+  });
+
+  /* ===== クイズ描画 ===== */
+  function renderQ(){
+    var item = QUESTIONS[idx];
+    $("pLabel").textContent = "Q"+(idx+1)+" / "+QUESTIONS.length;
+    var pct = Math.round((idx)/QUESTIONS.length*100);
+    $("pPct").textContent = pct+"%";
+    $("pBar").style.width = pct+"%";
+    $("qText").textContent = item.q;
+    $("qSub").textContent = item.s;
+    var box = $("opts"); box.innerHTML = "";
+    var keys = ["A","B","C","D"];
+    item.a.forEach(function(txt, i){
+      var b = document.createElement("button");
+      b.className = "opt" + (answers[idx]===i ? " sel" : "");
+      b.innerHTML = '<span class="k">'+keys[i]+'</span><span>'+txt+'</span>';
+      b.addEventListener("click", function(){
+        answers[idx] = i;
+        if(idx < QUESTIONS.length-1){ idx++; renderQ(); }
+        else { finish(); }
+      });
+      box.appendChild(b);
+    });
+    $("backBtn").style.visibility = idx===0 ? "hidden" : "visible";
+  }
+
+  /* ===== 採点＆結果 ===== */
+  function scoreOf(){ return answers.reduce(function(s,v){ return s + (v==null?0:(3-v)); }, 0); }
+  function levelOf(sc){ for(var i=0;i<LEVELS.length;i++){ if(sc>=LEVELS[i].min && sc<=LEVELS[i].max) return LEVELS[i]; } return LEVELS[0]; }
+
+  function renderResult(sc){
+    var L = levelOf(sc);
+    $("pBar").style.width="100%"; $("pPct").textContent="100%";
+    // gauge animate
+    var C = 515, off = C - (sc/30)*C;
+    var arc = $("gArc"); arc.style.transition="none"; arc.setAttribute("stroke-dashoffset", C);
+    // number count up
+    var target = sc, cur = 0;
+    var numEl = $("rScore");
+    var timer = setInterval(function(){
+      cur += Math.max(1, Math.round(target/18));
+      if(cur>=target){ cur=target; clearInterval(timer); }
+      numEl.textContent = cur;
+    }, 30);
+    setTimeout(function(){ arc.style.transition="stroke-dashoffset 1s ease"; arc.setAttribute("stroke-dashoffset", off); }, 60);
+
+    $("rLv").textContent = L.lv;
+    $("rName").textContent = L.name;
+    $("rTag").textContent = L.tag;
+    $("rStrong").textContent = L.strong;
+    $("rWeak").textContent = L.weak;
+
+    /* 弱点トップ2を特定して処方箋を表示 */
+    var pts = answers.map(function(v,i){ return {i:i, p:(v==null?0:(3-v))}; });
+    pts.sort(function(a,b){ return a.p-b.p || a.i-b.i; });
+    var weak2 = [pts[0], pts[1]];
+    var perfect = pts[0].p >= 3;
+    $("rxTitle").textContent = perfect ? "🏆 満点級！さらに伸ばす上級処方箋" : "🩺 あなた専用の処方箋";
+    $("rxLead").textContent = perfect
+      ? "弱点なし！次のステージに進むためのプロンプトを処方します。"
+      : "回答から特定した「弱点」に、今すぐコピペで効くプロンプトを処方します。";
+    var list = $("rxList"); list.innerHTML = "";
+    weak2.forEach(function(w){
+      var Q = QUESTIONS[w.i], RX = PRESCRIPTIONS[w.i];
+      var div = document.createElement("div"); div.className = "rx";
+      var head = document.createElement("div");
+      var chip = document.createElement("span"); chip.className="chip"; chip.textContent = Q.d;
+      var nm = document.createElement("span"); nm.className="rxname"; nm.textContent = RX.t;
+      head.appendChild(chip); head.appendChild(nm);
+      var pr = document.createElement("div"); pr.className="rxprompt"; pr.textContent = RX.p;
+      var why = document.createElement("p"); why.className="rxwhy"; why.textContent = "💡 " + RX.w;
+      var btn = document.createElement("button"); btn.className="copybtn"; btn.textContent = "📋 このプロンプトをコピー";
+      btn.addEventListener("click", function(){ copyText(RX.p, btn); });
+      div.appendChild(head); div.appendChild(pr); div.appendChild(why); div.appendChild(btn);
+      list.appendChild(div);
+    });
+    var ul = $("rSteps"); ul.innerHTML="";
+    L.steps.forEach(function(t){ var li=document.createElement("li"); li.textContent=t; ul.appendChild(li); });
+
+    $("ctaBtn").href = CONFIG.ctaUrl;
+
+    /* ===== シェア（2ステップ式：①コピー ②Xを開く） ===== */
+    var tags = CONFIG.hashtags.split(",").map(function(t){ return "#"+t.trim(); }).join(" ");
+    var shareBody = "【AI活用度診断】私は "+sc+"/30点、レベル"+L.lv.replace("LEVEL ","")+"「"+L.name+"」でした！\n"+
+                    L.tag+"\nあなたのAI偏差値もチェック👇\n"+TOOL_URL;
+    var shareFull = shareBody + "\n" + tags + " @" + CONFIG.xHandle;
+    $("shPreview").textContent = shareFull;
+    $("shCopyBtn").onclick = function(){
+      copyText(shareFull, this, "✅ コピーしました！次は②へ", "① 投稿文をコピーする");
+    };
+    $("shOpenBtn").href = "https://twitter.com/intent/tweet"
+      + "?text=" + encodeURIComponent(shareBody)
+      + "&hashtags=" + encodeURIComponent(CONFIG.hashtags)
+      + "&via=" + encodeURIComponent(CONFIG.xHandle);
+
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify({score:sc, at:Date.now(), answers:answers})); }catch(e){}
+  }
+
+  function copyText(text, btn, doneMsg, revertMsg){
+    doneMsg = doneMsg || "✅ コピーしました！AIに貼り付けてね";
+    revertMsg = revertMsg || "📋 このプロンプトをコピー";
+    function ok(){ btn.classList.add("done"); btn.textContent=doneMsg;
+      setTimeout(function(){ btn.classList.remove("done"); btn.textContent=revertMsg; }, 2000); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, function(){ legacyCopy(text); ok(); });
+    } else { legacyCopy(text); ok(); }
+  }
+  function legacyCopy(text){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  function finish(){ var sc = scoreOf(); show("result"); renderResult(sc); }
+
+  /* ===== イベント ===== */
+  $("startBtn").addEventListener("click", function(){ idx=0; answers=new Array(QUESTIONS.length).fill(null); show("quiz"); renderQ(); });
+  $("backBtn").addEventListener("click", function(){ if(idx>0){ idx--; renderQ(); } });
+  $("retryBtn").addEventListener("click", function(){ idx=0; answers=new Array(QUESTIONS.length).fill(null); show("quiz"); renderQ(); });
+
+  /* 前回結果があれば開始画面のボタン文言を調整 */
+  try{
+    var saved = JSON.parse(localStorage.getItem(STORE_KEY)||"null");
+    if(saved && typeof saved.score==="number"){
+      var b=$("startBtn"); b.textContent="もう一度診断する（前回 "+saved.score+"点）";
+    }
+  }catch(e){}
+
+  show("start");
+})();
+</script>
+</body>
+</html>
