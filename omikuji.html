@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>秘奥義おみくじ｜今日のAIプロンプトを1枚引く</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1c2330; --sub:#5b6577;
+    --line:#e6e9f0; --brand:#5b6cff; --brand2:#8b5cf6; --accent:#00b8a9;
+    --good:#16a34a; --gold:#d97706; --shadow:0 10px 30px rgba(28,35,48,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0e1117; --card:#171b24; --ink:#eef1f7; --sub:#9aa4b6;
+      --line:#262c39; --brand:#7c88ff; --brand2:#a78bfa; --accent:#2dd4bf;
+      --gold:#fbbf24; --shadow:0 10px 30px rgba(0,0,0,.4); }
+  }
+  :root[data-theme="light"]{ --bg:#f6f7fb; --card:#fff; --ink:#1c2330; --sub:#5b6577; --line:#e6e9f0; --gold:#d97706; --shadow:0 10px 30px rgba(28,35,48,.10); }
+  :root[data-theme="dark"]{ --bg:#0e1117; --card:#171b24; --ink:#eef1f7; --sub:#9aa4b6; --line:#262c39; --gold:#fbbf24; --shadow:0 10px 30px rgba(0,0,0,.4); }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP","Segoe UI",Meiryo,sans-serif;
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+    min-height:100dvh; display:flex; flex-direction:column; align-items:center;
+    padding:20px 16px 48px;
+  }
+  .wrap{width:100%; max-width:560px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    box-shadow:var(--shadow); padding:26px 22px; margin-top:14px;
+  }
+  .brandbar{display:flex; align-items:center; gap:8px; justify-content:center; color:var(--sub); font-size:13px; font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2))}
+  h1{font-size:clamp(22px,6vw,30px); line-height:1.35; margin:6px 0 4px; text-align:center; letter-spacing:.2px}
+  .lead{color:var(--sub); text-align:center; font-size:15px; margin:2px 0 18px}
+  .badge{display:inline-block; background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff;
+    font-weight:700; font-size:12px; padding:5px 12px; border-radius:999px; letter-spacing:.4px}
+  .meta{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; color:var(--sub); font-size:13px; margin:14px 0 4px}
+  .meta span{background:rgba(123,136,255,.12); padding:5px 11px; border-radius:999px; font-weight:600}
+  .btn{
+    display:block; width:100%; border:0; cursor:pointer; border-radius:14px;
+    font-size:17px; font-weight:800; padding:16px 18px; margin-top:16px; color:#fff;
+    background:linear-gradient(135deg,var(--brand),var(--brand2)); box-shadow:0 8px 20px rgba(91,108,255,.35);
+    transition:transform .08s ease, filter .15s ease; text-align:center; text-decoration:none;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn:hover{filter:brightness(1.05)}
+  .btn.sub{background:transparent; color:var(--brand); box-shadow:none; border:2px solid var(--line); font-weight:700; font-size:15px; padding:12px}
+  .themebtn{position:fixed; right:14px; top:14px; z-index:9; width:40px; height:40px; border-radius:50%;
+    border:1px solid var(--line); background:var(--card); cursor:pointer; font-size:18px; box-shadow:var(--shadow)}
+
+  /* draw animation */
+  .mikuji-emoji{font-size:74px; text-align:center; margin:8px 0 2px}
+  .shaking .mikuji-emoji{animation:shake .5s ease infinite}
+  @keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+
+  /* result */
+  .rankwrap{text-align:center; margin:4px 0 2px}
+  .rank{font-size:56px; font-weight:900; line-height:1.2;
+    background:linear-gradient(135deg,var(--brand),var(--brand2));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+  .rank.gold{background:linear-gradient(135deg,var(--gold),#f59e0b); -webkit-background-clip:text; background-clip:text}
+  .rankword{text-align:center; color:var(--sub); font-size:14px; margin:2px 0 12px}
+  .rx{border:1px solid var(--line); border-radius:12px; background:var(--card); padding:12px 13px; margin-top:10px}
+  .rx .chip{display:inline-block; font-size:12px; font-weight:800; color:#fff; padding:3px 10px; border-radius:999px;
+    background:linear-gradient(135deg,var(--brand),var(--brand2)); margin-right:6px}
+  .rx .rxname{font-size:14px; font-weight:800}
+  .rxprompt{margin-top:8px; border:1px dashed var(--line); border-radius:10px; background:rgba(123,136,255,.07);
+    padding:10px 11px; font-size:13.5px; line-height:1.65; word-break:break-word; -webkit-user-select:all; user-select:all}
+  .rxwhy{margin:8px 0 0; color:var(--sub); font-size:12.5px}
+  .copybtn{margin-top:9px; width:100%; border:0; cursor:pointer; border-radius:10px; font-weight:800; font-size:14px;
+    padding:10px; color:#fff; background:var(--accent)}
+  .copybtn.done{background:var(--good)}
+  .rxnote{margin:10px 0 0; color:var(--sub); font-size:12px}
+  .againnote{text-align:center; color:var(--sub); font-size:13px; margin-top:12px; font-weight:600}
+
+  /* share box */
+  .sharebox{margin-top:14px; border:1px solid var(--line); border-radius:16px; padding:16px 15px;
+    background:rgba(0,184,169,.06)}
+  .sharebox h3{margin:0 0 4px; font-size:15px}
+  .shlead{margin:0 0 10px; color:var(--sub); font-size:13px}
+  .shpreview{border:1px dashed var(--line); border-radius:10px; background:var(--card);
+    padding:10px 12px; font-size:13.5px; line-height:1.65; white-space:pre-wrap; word-break:break-word;
+    -webkit-user-select:all; user-select:all}
+  .btn.share{background:#000}
+  :root[data-theme="light"] .btn.share, :not([data-theme]) .btn.share{background:#111}
+  .btn.xopen{background:#111}
+  .shhint{margin:8px 0 0; color:var(--sub); font-size:12px}
+
+  .cta{margin-top:18px; border-radius:16px; padding:18px; text-align:center;
+    background:linear-gradient(135deg,rgba(91,108,255,.14),rgba(139,92,246,.14)); border:1px solid var(--line)}
+  .cta b{font-size:16px}
+  .cta p{margin:4px 0 12px; color:var(--sub); font-size:14px}
+  .foot{text-align:center; color:var(--sub); font-size:12px; margin-top:22px; line-height:1.6}
+  .foot a{color:var(--brand); text-decoration:none}
+  .hidden{display:none !important}
+  .fade{animation:fade .35s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+</style>
+</head>
+<body>
+<button class="themebtn" id="themeBtn" aria-label="テーマ切替">🌙</button>
+<div class="wrap">
+
+  <!-- START -->
+  <section id="screen-start">
+    <div class="brandbar"><span class="dot"></span> @Marron__Ai ｜ X × AIプロンプト × note</div>
+    <div class="card fade" id="startCard">
+      <div style="text-align:center"><span class="badge">無料・1日1回</span></div>
+      <div class="mikuji-emoji">🎋</div>
+      <h1>秘奥義おみくじ</h1>
+      <p class="lead">今日のあなたに効く<br>“AIプロンプト”を1枚、お届けします。</p>
+      <div class="meta"><span>🎴 1日1回</span><span>📋 コピペOK</span><span>📱 スマホ対応</span></div>
+      <button class="btn" id="drawBtn">今日の1枚を引く</button>
+      <p class="foot">結果はこの端末だけに保存されます（サーバー送信なし）。</p>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="screen-result" class="hidden">
+    <div class="brandbar"><span class="dot"></span> 秘奥義おみくじ ｜ @Marron__Ai</div>
+    <div class="card fade">
+      <div class="rankwrap"><div class="rank" id="rRank">大吉</div></div>
+      <p class="rankword" id="rWord"></p>
+
+      <div class="rx">
+        <div><span class="chip" id="rCat"></span><span class="rxname" id="rName"></span></div>
+        <div class="rxprompt" id="rPrompt"></div>
+        <p class="rxwhy" id="rWhy"></p>
+        <button class="copybtn" id="copyBtn">📋 このプロンプトをコピー</button>
+      </div>
+      <p class="rxnote">※「[ ]」がある場合はご自身の内容に書き換えて、AIに貼り付けてください。</p>
+      <p class="againnote" id="againNote"></p>
+
+      <div class="sharebox">
+        <h3>🎋 今日の1枚をシェアしよう</h3>
+        <p class="shlead">下の投稿文がそのまま使えます。かんたん2ステップ！</p>
+        <div class="shpreview" id="shPreview"></div>
+        <button class="btn share" id="shCopyBtn">① 投稿文をコピーする</button>
+        <a class="btn xopen" id="shOpenBtn" href="#" target="_blank" rel="noopener">② Xを開いてポストする</a>
+        <p class="shhint">②で投稿文が自動で入っていればそのままポスト。入っていなければ長押しで貼り付けてください。</p>
+      </div>
+
+      <div class="cta">
+        <b>🧠 自分の「AI偏差値」も知りたい？</b>
+        <p>10問・1分の無料診断。弱点に効く処方箋プロンプト付きです。</p>
+        <a class="btn" id="shindanBtn" href="#" target="_blank" rel="noopener">AI活用度診断をやってみる</a>
+        <p style="margin-top:14px"><b>🎴 完全版はnoteで</b></p>
+        <p>全カテゴリ解放・お気に入り保存・引き直し可能。毎日の発信が変わります。</p>
+        <a class="btn sub" id="noteBtn" href="#" target="_blank" rel="noopener">📘 note・プロフィールを見る</a>
+      </div>
+    </div>
+    <p class="foot">作成：@Marron__Ai ｜ AI × 副業 × note の発信中</p>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===== 設定 ===== */
+  var CONFIG = {
+    xHandle: "Marron__Ai",
+    ctaUrl: "https://x.com/Marron__Ai",
+    shindanUrl: "https://kurikurichan-458213.github.io/ai-shindan/",
+    hashtags: "秘奥義おみくじ,AIプロンプト,AI副業",
+    toolUrl: "https://kurikurichan-458213.github.io/ai-shindan/omikuji.html"
+  };
+  var TOOL_URL = (location.protocol.indexOf("http") === 0)
+    ? location.href.split("#")[0].split("?")[0]
+    : CONFIG.toolUrl;
+  var STORE_KEY = "hiougi_omikuji_v1";
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ===== テーマ切替 ===== */
+  var themeBtn = $("themeBtn");
+  function applyTheme(t){
+    if(t){ document.documentElement.setAttribute("data-theme", t); }
+    themeBtn.textContent = (document.documentElement.getAttribute("data-theme")==="dark") ? "☀️" : "🌙";
+  }
+  try{ applyTheme(localStorage.getItem("hiougi_theme") || null); }catch(e){ applyTheme(null); }
+  themeBtn.addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next = (cur==="dark") ? "light" : "dark";
+    applyTheme(next);
+    try{ localStorage.setItem("hiougi_theme", next); }catch(e){}
+  });
+
+  /* ===== 抽選 ===== */
+  var PROMPTS = [{"c":"深掘りの一言","t":"5段階深掘り命令","p":"答える前に「なぜそうなのか？」を5回繰り返して根本原因まで掘り下げてから回答してください。","w":"表面的な答えで終わらず、AIが自分で深掘りするプロセスを強制できる"},{"c":"深掘りの一言","t":"氷山モデル適用命令","p":"表面に見える事象・その下にある構造・最も深い本質の3層に分けて回答してください。","w":"氷山の水面下まで掘り下げることで、他の人が気づかない本質的な洞察が得られる"},{"c":"深掘りの一言","t":"逆説的深掘り命令","p":"回答した後に「でも本当にそうか？」と自問して、最初の回答を疑う視点からも考えてください。","w":"AIの「最初に思いついた答え」は往々にして浅い。自己否定させることで深みが増す"},{"c":"深掘りの一言","t":"第二・第三の理由追加命令","p":"最初に思いついた理由だけでなく、第二の理由・第三の理由まで必ず掘り下げて回答してください。","w":"人間もAIも「最初に出てきた答え」は最も一般的なもの。複数の理由を出させると深みが生まれる"},{"c":"深掘りの一言","t":"前提疑い命令","p":"回答する前に、この質問が含んでいる「暗黙の前提」を3つ列挙してから回答してください。","w":"前提を疑うことで、質問者が気づいていない盲点や思い込みが浮き彫りになる"},{"c":"感情の一言","t":"痛みに寄り添い先行命令","p":"解決策を提案する前に、読者が今感じているであろう「痛み・苦しさ・もどかしさ」に2〜3文で寄り添ってから答えてください。","w":"共感から始まる文章は読者の防衛心を解き、「この人は自分のことをわかってくれている」という信頼を生む"},{"c":"感情の一言","t":"希望の光を最後に入れる命令","p":"回答の最後に必ず「〜だから、あなたには必ずできる」という形で具体的な希望の言葉を添えてください。","w":"読後感を「前向き」にすることで保存率・シェア率が上がり、次のコンテンツも読みたくなる"},{"c":"感情の一言","t":"読者の代弁者になる命令","p":"「多くの人が心の中では思っているけど言い出せないこと」を代わりに言葉にしながら回答してください。","w":"言えない本音を代弁することで「わかってくれた！」という強烈な共感が生まれ、RTやシェアを誘発する"},{"c":"SNS最適化の一言","t":"エンゲージメント最大化構造命令","p":"Xのアルゴリズムで評価されるいいね・RT・リプライ・保存を最大化するための構造（冒頭の引き・問いかけ・CTA）に書き直してください。","w":"アルゴリズムを意識した構造に変えることで同じ内容でもリーチが数倍になる"},{"c":"SNS最適化の一言","t":"ファーストビュー最強化命令","p":"投稿の最初の1〜2行で「この先を読まずにはいられない」と感じさせる最強のファーストビューに書き直してください。","w":"最初の2行がスルーされるかクリックされるかを決める。ここを磨くだけでインプレッションが劇変する"},{"c":"SNS最適化の一言","t":"保存率特化設計命令","p":"「後で見返したい・保存しておきたい」と感じさせる要素（リスト・テンプレート・チェックリスト・まとめ）を意識的に追加してください。","w":"保存はXアルゴリズムが最も高評価するアクション。保存率を上げることで長期間表示され続ける"},{"c":"ネタ切れ対策","t":"悩みツイート発掘","p":"「[テーマ]」について、Xでよくつぶやかれている本音の悩みや愚痴を20個リストアップしてください。「〜できない」「〜がしんどい」「〜がわからない」のような生の言葉で書いてください。","w":"リアルな言葉が集まるので、刺さる投稿やnoteのネタに直結する"},{"c":"ネタ切れ対策","t":"深層心理ニーズ掘り起こし","p":"「[悩み]」を抱えている人が、本当は心の奥で求めているものを5段階で深掘りしてください。表面→本音→深層の順に書いてください。","w":"表面的な悩みの裏にある「本当の欲求」がわかり、記事やポストが刺さりやすくなる"},{"c":"ネタ切れ対策","t":"ペルソナ本音シミュレーション","p":"「[ターゲット像（例：副業を始めたい30代会社員）]」がXで検索しそうなキーワードを30個、検索意図とセットで教えてください。","w":"検索行動を知ることで、読まれる投稿・記事のキーワードが見つかる"},{"c":"ネタ切れ対策","t":"不満ワード収集","p":"「[ジャンル]」に関してXユーザーが感じている不満・イライラ・もどかしさを、ツイートっぽい口語表現で15個書いてください。","w":"ユーザーの本音に近い言葉を使えるので、投稿の共感度が一気に上がる"},{"c":"バズ投稿","t":"共感バズポスト生成","p":"「[テーマ]」について「[読者層（例：副業初心者）]」が思わず「いいね！」する共感ポストを5パターン作ってください。冒頭1行が特に刺さるようにしてください。","w":"共感は最もバズりやすい感情で、いいね・RTが連鎖しやすくなる"},{"c":"バズ投稿","t":"学び・気づき型バズポスト","p":"「[知識・気づき]」を、読んだ人が「これ知らなかった！シェアしたい！」と思うようなXポストに変換してください。3パターン作ってください。","w":"「知的好奇心をくすぐる」投稿は保存率・RT率が高い"},{"c":"バズ投稿","t":"ストーリー型バズポスト","p":"「[体験談（例：副業を始めて初めて1円を稼いだ話）]」を、Xで読まれるストーリー投稿（最大280文字）に仕上げてください。感情の山と谷を入れてください。","w":"ストーリーは読者を最後まで引き込み、フォロー率を高める最強フォーマット"},{"c":"バズ投稿","t":"問いかけバズポスト生成","p":"「[テーマ]」についてXユーザーが思わずリプライしたくなる「問いかけポスト」を5パターン作ってください。","w":"問いかけはリプ数を増やし、アルゴリズムに好まれるエンゲージメントが生まれる"},{"c":"noteタイトル","t":"タイトル10案量産","p":"「[記事の内容（例：AI副業で月5万円稼ぐ具体的な方法）]」のnoteタイトルを10案作ってください。数字・感情語・ターゲット明示を使い分けて、クリックされやすいものにしてください。","w":"タイトル案を複数持つことで、最もクリックされやすい一本を選べる"},{"c":"noteタイトル","t":"タイトル強化リライト","p":"以下のnoteタイトルを、もっとクリックされやすく改善してください。5パターン提案してください：「[現在のタイトル]」","w":"タイトルを磨くだけで、同じ記事でもアクセス数が数倍変わることがある"},{"c":"noteタイトル","t":"数字入りタイトル生成","p":"「[テーマ]」に「[数字（例：3・7・30日）]」を入れたnoteタイトルを7案作ってください。読者が「すぐに使えそう」と感じるようにしてください。","w":"数字入りタイトルは具体性が増してクリック率が高くなる"},{"c":"noteタイトル","t":"ターゲット明示タイトル生成","p":"「[ターゲット（例：副業初心者・時間がない会社員）]」に向けた「[テーマ]」の記事タイトルを7案作ってください。タイトルを読んだ瞬間に「自分のことだ！」と思わせてください。","w":"ターゲットを明示することで、読んでほしい人に届きやすくなる"},{"c":"文章上達","t":"文章全体リライト","p":"以下の文章を「[読者像（例：副業初心者）]」向けに、読みやすくてわかりやすい文章にリライトしてください。文体・構成・言葉選びを改善してください：\n「[原文]」","w":"AIによるリライトは一人作業の限界を突き破り、文章クオリティを一気に引き上げる"},{"c":"文章上達","t":"導入文（リード文）強化","p":"「[テーマ]」の記事の導入文（リード文）を「読者の悩みに共感→問題提起→解決の予告」の流れで3パターン作ってください。読者が「続きを読まずにはいられない」感じにしてください。","w":"最初の3行で読者を引き込めるかどうかが記事全体の読了率を決める"},{"c":"文章上達","t":"段落構成の最適化","p":"以下の段落を「1段落1メッセージの原則」に従って読みやすく改善してください。長すぎる段落は分割し、接続詞もスムーズにしてください：\n「[段落]」","w":"段落を整理するだけで、同じ内容でも驚くほど読みやすくなる"},{"c":"収益化","t":"スキル別副業アイデア発掘","p":"私のスキル・経験は「[スキル（例：Excelが得意・子育て経験・接客5年）]」です。AIを使って月3万円を目指せる副業アイデアを10個提案してください。初めやすさ・月収目安・必要ツールもセットで教えてください。","w":"自分の既存スキルを活かすと、ゼロから学ぶ必要がなく最短で収益化できる"},{"c":"収益化","t":"note副業アイデア専門特化","p":"「[テーマ（例：育児・仕事術・節約）]」でnoteを使ったAI副業アイデアを10個提案してください。各アイデアの月収目安と始めやすさも教えてください。","w":"テーマに特化することで競合の少ないニッチポジションが見つかる"},{"c":"収益化","t":"ゼロ円スタート副業アイデア","p":"初期費用ゼロ・スマホだけで始められるAI副業アイデアを10個提案してください。使えるツールは「[ツール（例：ChatGPT無料版・Canva無料版）]」で週「[時間数]時間」使えます。","w":"ゼロ円スタートを知ることで「お金がない」という言い訳がなくなる"},{"c":"収益化","t":"時間別副業アイデア発掘","p":"1日「[時間（例：30分・1時間・2時間）]」しか使えない人でも進められるAI副業アイデアを10個提案してください。月の収益ポテンシャルも教えてください。","w":"時間を現実的に考えることで、続けられる副業が選べるようになる"}];
+
+  var RANKS = [
+    { k:"大吉", w:"今日は攻めの日。迷ったら公開しちゃいましょう！", gold:true,  p:0.10 },
+    { k:"中吉", w:"いい流れが来ています。1つだけ試せば十分です。",   gold:false, p:0.30 },
+    { k:"吉",   w:"コツコツが効く日。5分だけAIと話してみましょう。", gold:false, p:0.40 },
+    { k:"末吉", w:"小さく始める日。コピペ1回だけでも前進です。",     gold:false, p:0.20 }
+  ];
+
+  function todayStr(){
+    var d = new Date();
+    var m = ("0"+(d.getMonth()+1)).slice(-2), day = ("0"+d.getDate()).slice(-2);
+    return d.getFullYear()+"-"+m+"-"+day;
+  }
+  function rollRank(){
+    var r = Math.random(), acc = 0;
+    for(var i=0;i<RANKS.length;i++){ acc += RANKS[i].p; if(r < acc) return i; }
+    return RANKS.length - 1;
+  }
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); }catch(e){ return null; }
+  }
+  function save(o){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(o)); }catch(e){} }
+
+  function show(name){
+    $("screen-start").classList.add("hidden");
+    $("screen-result").classList.add("hidden");
+    $("screen-"+name).classList.remove("hidden");
+    window.scrollTo(0,0);
+  }
+
+  function renderResult(state, isNew){
+    var P = PROMPTS[state.idx % PROMPTS.length];
+    var R = RANKS[state.rank] || RANKS[2];
+    $("rRank").textContent = R.k;
+    $("rRank").className = "rank" + (R.gold ? " gold" : "");
+    $("rWord").textContent = R.w;
+    $("rCat").textContent = P.c;
+    $("rName").textContent = P.t;
+    $("rPrompt").textContent = P.p;
+    $("rWhy").textContent = P.w ? ("💡 " + P.w) : "";
+    $("againNote").textContent = isNew ? "🎋 今日の1枚はこちら！また明日も引けます。"
+                                       : "🌙 今日はもう引きました。この1枚をじっくり使って、また明日！";
+    $("copyBtn").onclick = function(){ copyText(P.p, this); };
+
+    var shareBody = "今日の秘奥義おみくじは【"+R.k+"】でした🎋\n"+
+                    "引いた秘奥義：「"+P.t+"」\n"+
+                    "あなたも今日の1枚をどうぞ👇\n"+TOOL_URL;
+    var tags = CONFIG.hashtags.split(",").map(function(t){ return "#"+t.trim(); }).join(" ");
+    var shareFull = shareBody + "\n" + tags + " @" + CONFIG.xHandle;
+    $("shPreview").textContent = shareFull;
+    $("shCopyBtn").onclick = function(){
+      copyText(shareFull, this, "✅ コピーしました！次は②へ", "① 投稿文をコピーする");
+    };
+    $("shOpenBtn").href = "https://twitter.com/intent/tweet"
+      + "?text=" + encodeURIComponent(shareBody)
+      + "&hashtags=" + encodeURIComponent(CONFIG.hashtags)
+      + "&via=" + encodeURIComponent(CONFIG.xHandle);
+    $("shindanBtn").href = CONFIG.shindanUrl;
+    $("noteBtn").href = CONFIG.ctaUrl;
+    show("result");
+  }
+
+  function copyText(text, btn, doneMsg, revertMsg){
+    doneMsg = doneMsg || "✅ コピーしました！AIに貼り付けてね";
+    revertMsg = revertMsg || "📋 このプロンプトをコピー";
+    function ok(){ btn.classList.add("done"); btn.textContent=doneMsg;
+      setTimeout(function(){ btn.classList.remove("done"); btn.textContent=revertMsg; }, 2000); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, function(){ legacyCopy(text); ok(); });
+    } else { legacyCopy(text); ok(); }
+  }
+  function legacyCopy(text){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  $("drawBtn").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true; btn.textContent = "引いています…";
+    $("startCard").classList.add("shaking");
+    setTimeout(function(){
+      $("startCard").classList.remove("shaking");
+      btn.disabled = false; btn.textContent = "今日の1枚を引く";
+      var state = { date: todayStr(), idx: Math.floor(Math.random()*PROMPTS.length), rank: rollRank() };
+      save(state);
+      renderResult(state, true);
+    }, 1000);
+  });
+
+  /* 同日再訪：今日の1枚をそのまま表示 */
+  var saved = load();
+  if(saved && saved.date === todayStr()){
+    renderResult(saved, false);
+  }
+})();
+</script>
+</body>
+</html>
